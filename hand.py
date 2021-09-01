@@ -1,5 +1,9 @@
 import cv2
 import mediapipe as mp
+import pickle
+import numpy as np
+import time
+import pandas as pd
 
 
 class Hand:
@@ -46,14 +50,17 @@ class Hand:
             frame: imput frame.
             draw: Nếu draw là True, sẽ vẽ landmarks và connections của
              21 điểm hand landmakrs.
+
+        Return:
+            frame đã phát hiện bàn tay.
         """
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.results = self.hand_detection.process(rgb_frame)
         if self.results.multi_hand_landmarks:
-            self.landmark_positions = []
+            self.hands = []
             self.data = []
             for self.hand in self.results.multi_hand_landmarks:
-                self.landmark_positions.append(self.find_landmark(frame))
+                self.hands.append(self.find_landmark(frame))
                 self.data.append(self.take_data(frame))
                 if draw:
                     frame = self.draw_connection(frame)
@@ -62,31 +69,48 @@ class Hand:
 
     def find_landmark(self, frame):
         """
-        Lấy tọa độ các landmarks.
+        Lấy tọa độ 21 landmarks.
+        Args:
+            frame: input frame.
+
+        Return:
+            list 21 landmarks, mỗi landmark là một set gồm
+             index, tọa độ x, tọa độ y.
         """
         landmark_positions = []
         frame_height, frame_width, _ = frame.shape
         for index_landmark, landmark in enumerate(self.hand.landmark):
-            x_landmark = int(landmark.x_landmark * frame_width)
-            y_landmark = int(landmark.y_landmark * frame_height)
+            x_landmark = int(landmark.x * frame_width)
+            y_landmark = int(landmark.y * frame_height)
             landmark_positions.append((index_landmark, x_landmark, y_landmark))
         return landmark_positions
 
     def draw_landmark(self, frame):
         """
         Vẽ các điểm landmarks.
+        Args:
+            frame: input frame.
+
+        Return:
+            frame có các điểm landmars được vẽ hình tròn.
         """
-        for hand in self.landmark_positions:
-            for point in hand:
-                frame = cv2.circle(frame, (point[1], point[2]), 3,
-                                   (0, 0, 255), cv2.FILLED)
+        CIRCLE_SIZE = 3
+        CIRCLE_COLOR = (0, 0, 255) # Red
+        for hand in self.hands:
+            for landmark in hand:
+                x_landmark = landmark[1]
+                y_landmark = landmark[2]
+                frame = cv2.circle(frame, (x_landmark, y_landmark), CIRCLE_SIZE,
+                                   CIRCLE_COLOR, cv2.FILLED)
         return frame
 
     def draw_connection(self, frame):
         """
         Vẽ các connections nối các landmarks.
         """
-        connection = [(0, 1),  # wrist -> thumb_cmc
+        LINE_COLOR = (0, 255, 0) # Green
+        LINE_SIZE = 2
+        CONNECTIONS = [(0, 1),  # wrist -> thumb_cmc
                       (1, 2),  # thumb_cmc -> thumb_mcp
                       (2, 3),  # thumb_mcp -> thumb_ip
                       (3, 4),  # thumb_ip -> thumb_tip
@@ -107,68 +131,77 @@ class Hand:
                       (5, 9),  # index_finger_mcp -> middle_finger_mcp
                       (9, 13),  # middle_finger_mcp -> ring_finger_mcp
                       (13, 17)]  # ring_finger_mcp -> pinky_mcp
-        for hand in self.landmark_positions:
-            for con in connection:
-                p1 = hand[con[0]]
-                p2 = hand[con[1]]
-                frame = cv2.line(frame, (p1[1], p1[2]), (p2[1], p2[2]),
-                                 (0, 255, 0), 2)
+        for hand in self.hands:
+            for connect in CONNECTIONS:
+                first_point = hand[connect[0]]
+                second_point = hand[connect[1]]
+
+                x_first_point = first_point[1]
+                y_first_point = first_point[2]
+                x_second_point = second_point[1]
+                y_second_point = second_point[2]
+
+                frame = cv2.line(frame, (x_first_point, y_first_point),
+                    (x_second_point, y_second_point), LINE_COLOR, LINE_SIZE)
         return frame
 
     def take_data(self, frame):
+        """
+        Lấy dữ liệu để dự đoán cử chỉ.
+
+        Return: list tọa độ x, y của từng landmark liên tiếp nhau.
+         [x1, y1, x2, y2, ..., xn, yn]
+        """
         data = []
-        h, w, _ = frame.shape
-        for idx, lnk in enumerate(self.hand.landmark):
-            x = int(lnk.x * w)
-            y = int(lnk.y * h)
-            data.append(x)
-            data.append(y)
+        frame_height, frame_width, _ = frame.shape
+        for _, landmark in enumerate(self.hand.landmark):
+            x_landmark = int(landmark.x * frame_width)
+            y_landmark = int(landmark.y * frame_height)
+            data.append(x_landmark)
+            data.append(y_landmark)
         return data
 
-import pickle
-import numpy as np
-import time
-import pandas as pd
-def main():
-    filename = 'finalized_model.sav'
-    capture = cv2.VideoCapture(0)
-    hand_detector = Hand(max_num_hands=1, min_detection_confidence=0.8, min_tracking_confidence=0.8)
-    loaded_model = pickle.load(open(filename, 'rb'))
-    t0 = 0
-    while True:
-        _, frame = capture.read()
-        frame = hand_detector.detect(frame)
-        try:
-            X = np.array(hand_detector.data).reshape(1, -1)
-            features = ['x0', 'y0', 'x4', 'y4', 'x5', 'y5', 'x8', 'y8', 'x9',
-                        'y9', 'x12', 'y12', 'x13', 'y13', 'x17', 'y17', 'x20',
-                        'y20']
-            X = np.array(X).reshape(1, -1)
-            actual = pd.DataFrame(
-                X,
-                columns=['x0', 'y0', 'x1', 'y1', 'x2', 'y2',
-                         'x3', 'y3', 'x4', 'y4', 'x5', 'y5',
-                         'x6', 'y6', 'x7', 'y7', 'x8', 'y8',
-                         'x9', 'y9', 'x10', 'y10', 'x11', 'y11',
-                         'x12', 'y12', 'x13', 'y13', 'x14', 'y14',
-                         'x15', 'y15', 'x16', 'y16', 'x17', 'y17',
-                         'x18', 'y18', 'x19', 'y19', 'x20','y20']
-            )
+    def predict_gesture(self, loaded_model, frame):
+        if len(self.data) > 1:
+            first_hand = self.data[0]
+            second_hand = self.data[1]
 
-            result = loaded_model.predict(actual[features])
-            print(result)
-            cv2.putText(frame, result[0], (30, 400), cv2.FONT_ITALIC, 2,
+            X_rescaled = []
+            for hand in [first_hand, second_hand]:
+                X_rescaled.append(self.preprocess_input(hand))
+
+            X_first_hand = np.array(X_rescaled[0]).reshape(1, -1)
+            result_first_hand = loaded_model.predict(X_first_hand)
+            cv2.putText(frame, result_first_hand[0], (30, 400), cv2.FONT_ITALIC, 2,
                         (0, 255, 0), 2)
-        except:
-            pass
-        t1 = time.time()
-        fps = 1 / (t1 - t0)
-        t0 = t1
-        frame = cv2.putText(frame, str(int(fps)), (20, 80), cv2.FONT_ITALIC,
-                            1, (0, 255, 0), 2)
-        cv2.imshow('Detector', frame)
-        cv2.waitKey(1)
 
+            X_second_hand = np.array(X_rescaled[1]).reshape(1, -1)
+            result_second_hand = loaded_model.predict(X_second_hand)
+            cv2.putText(frame, result_second_hand[0], (300, 400), cv2.FONT_ITALIC, 2,
+                        (0, 255, 0), 2)
+
+
+    def calculate_euclid_distance(self, x_first_point, y_first_point,
+                                  x_second_point, y_second_point):
+
+        distance = ((x_first_point - x_second_point)**2
+            + (y_first_point - y_second_point)**2)**(1/2)
+
+        return distance
+
+    def preprocess_input(self, hand):
+        X = np.array(hand)
+        total = 0
+        distancies = []
+        for x, y in zip([8, 16, 24, 32, 40], [9, 17, 25, 33, 41]):
+            distance = self.calculate_euclid_distance(X[x], X[y], X[0], X[1])
+            distancies.append(distance)
+            total += distance
+
+        rescaled = []
+        for distance in distancies:
+            rescaled.append(distance / total)
+        return rescaled
 
 
 def data():
@@ -205,7 +238,8 @@ def euclid():
         frame = hand_detector.detect(frame)
         try:
             if len(hand_detector.data) > 1:
-                X = np.array(hand_detector.data[0])
+                first_hand = hand_detector.data[0]
+                X = np.array(first_hand)
                 d04 = ((X[8] - X[0])**2 + (X[9] - X[1])**2)**(1/2)
                 d08 = ((X[16] - X[0])**2 + (X[17] - X[1])**2)**(1/2)
                 d012 = ((X[24] - X[0])**2 + (X[25] - X[1])**2)**(1/2)
@@ -250,6 +284,25 @@ def euclid():
         cv2.imshow('Detector', frame)
         cv2.waitKey(1)
 
+def main():
+    filename = 'euclid_model.sav'
+    capture = cv2.VideoCapture(0)
+    hand_detector = Hand(max_num_hands=2)
+    loaded_model = pickle.load(open(filename, 'rb'))
+    t0 = 0
+    while True:
+        _, frame = capture.read()
+        frame = hand_detector.detect(frame)
+        hand_detector.predict_gesture(loaded_model, frame)
+        t1 = time.time()
+        fps = 1 / (t1 - t0)
+        t0 = t1
+        frame = cv2.putText(frame, str(int(fps)), (20, 80), cv2.FONT_ITALIC,
+                            1, (0, 255, 0), 2)
+        cv2.imshow('Detector', frame)
+        cv2.waitKey(1)
+
+
 
 if __name__ == '__main__':
-    euclid()
+    main()
