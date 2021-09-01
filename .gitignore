@@ -1,0 +1,16 @@
+# Python
+*.pyc
+*~
+__pycache__
+
+# Env
+.env
+myvenv/
+venv/
+.idea/
+
+# Data
+*.txt
+
+# Predict Model
+*.sav
