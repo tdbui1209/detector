@@ -58,10 +58,10 @@ class Hand:
         #             cv2.putText(frame, self.hand.classification[0].label,
         #                         (100, 50), cv2.FONT_ITALIC, 1, (0, 255, 0), 2)
         if self.results.multi_hand_landmarks:
-            self.pos = []
+            self.landmark_positions = []
             self.data = []
             for self.hand in self.results.multi_hand_landmarks:
-                self.pos.append(self.find_landmark(frame))
+                self.landmark_positions.append(self.find_landmark(frame))
                 self.data.append(self.take_data(frame))
                 if draw:
                     frame = self.draw_connection(frame)
@@ -72,19 +72,19 @@ class Hand:
         """
         Lấy tọa độ các landmarks.
         """
-        pos = []
+        landmark_positions = []
         h, w, _ = frame.shape
         for idx, lnk in enumerate(self.hand.landmark):
             x = int(lnk.x * w)
             y = int(lnk.y * h)
-            pos.append((idx, x, y))
-        return pos
+            landmark_positions.append((idx, x, y))
+        return landmark_positions
 
     def draw_landmark(self, frame):
         """
         Vẽ các điểm landmarks.
         """
-        for hand in self.pos:
+        for hand in self.landmark_positions:
             for point in hand:
                 frame = cv2.circle(frame, (point[1], point[2]), 3,
                                    (0, 0, 255), cv2.FILLED)
@@ -115,7 +115,7 @@ class Hand:
                       (5, 9),  # index_finger_mcp -> middle_finger_mcp
                       (9, 13),  # middle_finger_mcp -> ring_finger_mcp
                       (13, 17)]  # ring_finger_mcp -> pinky_mcp
-        for hand in self.pos:
+        for hand in self.landmark_positions:
             for con in connection:
                 p1 = hand[con[0]]
                 p2 = hand[con[1]]
