@@ -62,22 +62,22 @@ class Pose:
         self.results = self.pose_detection.process(rgb_frame)
         if self.results.pose_landmarks:
             if draw:
-                self.pos = self.find_pos(frame)
+                self.landmark_positions = self.find_landmark(frame)
                 frame = self.draw_landmark(frame)
                 frame = self.draw_connection(frame)
         return frame
 
-    def find_pos(self, frame):
+    def find_landmark(self, frame):
         """
         Lấy tọa độ các landmarks.
         """
-        pos = []
+        landmark_positions = []
         h, w, _ = frame.shape
         for idx, lmk in enumerate(self.results.pose_landmarks.landmark):
             x = int(lmk.x * w)
             y = int(lmk.y * h)
-            pos.append((idx, x, y))
-        return pos
+            landmark_positions.append((idx, x, y))
+        return landmark_positions
 
     def draw_landmark(self, frame):
         """
@@ -85,7 +85,7 @@ class Pose:
         """
         # Drop face, hand landmarks
         drop_landmarks = [i for i in range(11)] + [i for i in range(17, 23)]
-        for point in self.pos:
+        for point in self.landmark_positions:
             if point[0] not in drop_landmarks:
                 frame = cv2.circle(frame, (point[1], point[2]), 5,
                                    (0, 0, 255), cv2.FILLED)
@@ -115,8 +115,8 @@ class Pose:
                       (23, 24)]  # left_hip -> right_hip
 
         for con in connection:
-            p1 = self.pos[con[0]]
-            p2 = self.pos[con[1]]
+            p1 = self.landmark_positions[con[0]]
+            p2 = self.landmark_positions[con[1]]
             frame = cv2.line(frame, (p1[1], p1[2]), (p2[1], p2[2]),
                              (0, 255, 0), 2)
         return frame
