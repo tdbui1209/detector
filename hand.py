@@ -227,63 +227,6 @@ def data():
         print(count)
 
 
-def euclid():
-    filename = 'euclid_model.sav'
-    capture = cv2.VideoCapture(0)
-    hand_detector = Hand(max_num_hands=2)
-    loaded_model = pickle.load(open(filename, 'rb'))
-    t0 = 0
-    while True:
-        _, frame = capture.read()
-        frame = hand_detector.detect(frame)
-        try:
-            if len(hand_detector.data) > 1:
-                first_hand = hand_detector.data[0]
-                X = np.array(first_hand)
-                d04 = ((X[8] - X[0])**2 + (X[9] - X[1])**2)**(1/2)
-                d08 = ((X[16] - X[0])**2 + (X[17] - X[1])**2)**(1/2)
-                d012 = ((X[24] - X[0])**2 + (X[25] - X[1])**2)**(1/2)
-                d016 = ((X[32] - X[0])**2 + (X[33] - X[1])**2)**(1/2)
-                d020 = ((X[40] - X[0]) ** 2 + (X[41] - X[1]) ** 2)**(1 / 2)
-                total = d04 + d08 + d012 + d016 + d020
-                r04 = d04 / total
-                r08 = d08 / total
-                r012 = d012 / total
-                r016 = d016 / total
-                r020 = d020 / total
-                actual = np.array([r04, r08, r012, r016, r020]).reshape(1, -1)
-                result = loaded_model.predict(actual)
-                cv2.putText(frame, result[0], (30, 400), cv2.FONT_ITALIC, 2,
-                            (0, 255, 0), 2)
-
-                X_right = np.array(hand_detector.data[1])
-                d04_right = ((X_right[8] - X_right[0]) ** 2 + (X_right[9] - X_right[1]) ** 2) ** (1 / 2)
-                d08_right = ((X_right[16] - X_right[0]) ** 2 + (X_right[17] - X_right[1]) ** 2) ** (1 / 2)
-                d012_right = ((X_right[24] - X_right[0]) ** 2 + (X_right[25] - X_right[1]) ** 2) ** (1 / 2)
-                d016_right = ((X_right[32] - X_right[0]) ** 2 + (X_right[33] - X_right[1]) ** 2) ** (1 / 2)
-                d020_right = ((X_right[40] - X_right[0]) ** 2 + (X_right[41] - X_right[1]) ** 2) ** (1 / 2)
-                total_right = d04_right + d08_right + d012_right + d016_right + d020_right
-                r04_right = d04_right / total_right
-                r08_right = d08_right / total_right
-                r012_right = d012_right / total_right
-                r016_right = d016_right / total_right
-                r020_right = d020_right / total_right
-
-                actual_right = np.array([r04_right, r08_right, r012_right, r016_right, r020_right]).reshape(1, -1)
-                result_right = loaded_model.predict(actual_right)
-                cv2.putText(frame, result_right[0], (300, 400), cv2.FONT_ITALIC, 2,
-                            (0, 255, 0), 2)
-        except:
-            pass
-
-        t1 = time.time()
-        fps = 1 / (t1 - t0)
-        t0 = t1
-        frame = cv2.putText(frame, str(int(fps)), (20, 80), cv2.FONT_ITALIC,
-                            1, (0, 255, 0), 2)
-        cv2.imshow('Detector', frame)
-        cv2.waitKey(1)
-
 def main():
     filename = 'euclid_model.sav'
     capture = cv2.VideoCapture(0)
