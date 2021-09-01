@@ -49,14 +49,6 @@ class Hand:
         """
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.results = self.hand_detection.process(rgb_frame)
-        # if self.results.multi_handedness:
-        #     for self.hand in self.results.multi_handedness:
-        #         if self.hand.classification[0].index == 0:
-        #             cv2.putText(frame, self.hand.classification[0].label,
-        #                         (400, 50), cv2.FONT_ITALIC, 1, (0, 255, 0), 2)
-        #         else:
-        #             cv2.putText(frame, self.hand.classification[0].label,
-        #                         (100, 50), cv2.FONT_ITALIC, 1, (0, 255, 0), 2)
         if self.results.multi_hand_landmarks:
             self.landmark_positions = []
             self.data = []
@@ -73,11 +65,11 @@ class Hand:
         Lấy tọa độ các landmarks.
         """
         landmark_positions = []
-        h, w, _ = frame.shape
-        for idx, lnk in enumerate(self.hand.landmark):
-            x = int(lnk.x * w)
-            y = int(lnk.y * h)
-            landmark_positions.append((idx, x, y))
+        frame_height, frame_width, _ = frame.shape
+        for index_landmark, landmark in enumerate(self.hand.landmark):
+            x_landmark = int(landmark.x_landmark * frame_width)
+            y_landmark = int(landmark.y_landmark * frame_height)
+            landmark_positions.append((index_landmark, x_landmark, y_landmark))
         return landmark_positions
 
     def draw_landmark(self, frame):
