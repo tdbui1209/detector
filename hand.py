@@ -162,38 +162,72 @@ class Hand:
         return data
 
     def predict_gesture(self, loaded_model, frame):
-        if len(self.data) > 1:
-            first_hand = self.data[0]
-            second_hand = self.data[1]
+        """
+        Dự đoán cử chỉ bàn tay.
+        Args:
+            loaded_model: pretrain model
 
-            X_rescaled = []
-            for hand in [first_hand, second_hand]:
-                X_rescaled.append(self.preprocess_input(hand))
+        Return:
+            2 giá trị dự đoán của mỗi bàn tay. Hiển thị trên màn hình.
+        """
+        try:
+            if len(self.data) > 1:
+                first_hand = self.data[0]
+                second_hand = self.data[1]
 
-            X_first_hand = np.array(X_rescaled[0]).reshape(1, -1)
-            result_first_hand = loaded_model.predict(X_first_hand)
-            cv2.putText(frame, result_first_hand[0], (30, 400), cv2.FONT_ITALIC, 2,
-                        (0, 255, 0), 2)
+                X_rescaled = []
+                for hand in [first_hand, second_hand]:
+                    X_rescaled.append(self.preprocess_input(hand))
 
-            X_second_hand = np.array(X_rescaled[1]).reshape(1, -1)
-            result_second_hand = loaded_model.predict(X_second_hand)
-            cv2.putText(frame, result_second_hand[0], (300, 400), cv2.FONT_ITALIC, 2,
-                        (0, 255, 0), 2)
+                X_first_hand = np.array(X_rescaled[0]).reshape(1, -1)
+                result_first_hand = loaded_model.predict(X_first_hand)
+                cv2.putText(frame, result_first_hand[0], (30, 400), cv2.FONT_ITALIC, 2,
+                            (0, 255, 0), 2)
 
+                X_second_hand = np.array(X_rescaled[1]).reshape(1, -1)
+                result_second_hand = loaded_model.predict(X_second_hand)
+                cv2.putText(frame, result_second_hand[0], (300, 400), cv2.FONT_ITALIC, 2,
+                            (0, 255, 0), 2)
+        except:
+            pass
 
     def calculate_euclid_distance(self, x_first_point, y_first_point,
                                   x_second_point, y_second_point):
+        """
+        Tính khoảng cách euclid giữa 2 điểm.
+        Args:
+            x_first_point: Tọa độ x điểm thứ nhất
+            y_first_point: Tọa độ y điểm thứ nhất
+            x_second_point: Tọa độ x điểm thứ hai
+            y_second_point: Tọa độ y điểm thứ hai
 
+        Return:
+            Khoảng cách euclid giữa 2 điểm.
+        """
         distance = ((x_first_point - x_second_point)**2
             + (y_first_point - y_second_point)**2)**(1/2)
 
         return distance
 
-    def preprocess_input(self, hand):
-        X = np.array(hand)
+    def preprocess_input(self, X):
+        """
+        Xử lý dữ liệu đầu vào để dự đoán cử chỉ. Đầu vào là tọa độ x, y
+         của các landmarks, sẽ tính ra khoảng cách từ 5 đầu ngón tay tới
+          cổ tay. Sau đó lấy tỉ lệ bằng cách chia từng khoảng cách cho
+           tổng khoảng cách.
+        Args:
+            hand: list chứa tọa độ x, y của từng landmark.
+             [x1, y1, x2, y2 ..., xn, yn]
+
+        Return:
+            5 giá trị khoảng cách từ 5 đầu ngón tay tới cổ tay đã được rescale.
+        """
         total = 0
         distancies = []
+        # 8, 16, ... 40 là index các tọa độ x của 5 đầu ngón tay
+        # 9, 17, ... 41 là index các tọa độ y của 5 đầu ngón tay
         for x, y in zip([8, 16, 24, 32, 40], [9, 17, 25, 33, 41]):
+            # 0, 1 là index tọa độ x, y của cổ tay
             distance = self.calculate_euclid_distance(X[x], X[y], X[0], X[1])
             distancies.append(distance)
             total += distance
