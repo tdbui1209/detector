@@ -4,6 +4,10 @@ I build this package with three modules for each solutions. So you can detect fa
 Not just detect, i will develop some features base on MediaPipe in the future.
 <hr>
 
+### Install requirements.txt first
+
+pip install -r requirements.txt
+
 ### Example:
 
 <pre>
