@@ -24,9 +24,9 @@ while True:
     
 # Ctrl + C to quit
 </pre>
+![alt][4]
 
-
-PREDICT GESTURE
+### PREDICT GESTURE
 <pre>
 import cv2
 import mediapipe as mp
@@ -49,7 +49,7 @@ while True:
 # Ctrl + C to quit
 
 </pre>
-![alt][4]
+
 
 
 
