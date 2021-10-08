@@ -13,6 +13,7 @@ pip install -r requirements.txt
 <pre>
 import cv2 # open-cv
 import mediapipe as mp
+from hand import Hand
 
 capture = cv2.VideoCapture(0)
 hand_detector = Hand(max_num_hands=2)  # detector will detect maximum two hands in one frame
@@ -30,6 +31,7 @@ while True:
 <pre>
 import cv2
 import mediapipe as mp
+from hand import Hand
 import pickle
 
 MODEL_PATH = 'euclid_model.sav'
