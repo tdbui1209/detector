@@ -25,6 +25,30 @@ while True:
 # Ctrl + C to quit
 </pre>
 
+
+PREDICT GESTURE
+<pre>
+import cv2
+import mediapipe as mp
+import pickle
+
+MODEL_PATH = 'euclid_model.sav'
+LOADED_MODEL = pickle.load(open(MODEL_PATH, 'rb'))
+
+capture = cv2.VideoCapture(0)
+hand_detector = Hand(max_num_hands=2)
+
+while True:
+    _, frame = capture.read()
+    frame = hand_detector.detect(frame)
+    hand_detector.predict_gesture(LOADED_MODEL, frame)
+    
+    cv2.imshow('Frame', frame)
+    cv2.waitKey(1)
+    
+# Ctrl + C to quit
+
+</pre>
 ![alt][4]
 
 
